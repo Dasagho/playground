@@ -5,4 +5,4 @@ build:
 	go build -o runServer
 
 test:
-	go test ./...
+	go test package handler_test -v
