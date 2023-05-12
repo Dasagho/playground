@@ -11,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const loginEndpoint string = "https://intranet.upv.es/pls/soalu/est_aute.intraalucomp"
+
 func PostLogin(c *gin.Context) {
 	var login model.Login
 	if err := c.BindJSON(&login); err != nil {
@@ -21,8 +23,7 @@ func PostLogin(c *gin.Context) {
 	client := client.New()
 	formData := login.FillLoginFormData()
 
-	fmt.Printf("formData: %v\n", formData)
-	loginResponse, err := client.PostForm("https://intranet.upv.es/pls/soalu/est_aute.intraalucomp", formData)
+	loginResponse, err := client.PostForm(loginEndpoint, formData)
 	if err != nil {
 		panic("Error building login request" + err.Error())
 	}
