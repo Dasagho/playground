@@ -5,4 +5,7 @@ build:
 	go build -o runServer
 
 test:
-	go test package handler_test -v
+	go test ./api/handler/login_handler_test.go
+
+test-v:
+	go test ./api/handler/login_handler_test.go -v

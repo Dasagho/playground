@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/dasagho/playground/api/handler"
+	"github.com/dasagho/playground/api/routers"
 )
 
 func main() {
-	router := handler.SetupRouter()
+	router := routers.SetupRouter()
 	router.Run(":8000")
 }
