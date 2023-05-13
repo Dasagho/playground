@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dasagho/playground/api/handler"
 	"github.com/dasagho/playground/api/routers"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -18,7 +17,7 @@ func init() {
 
 func main() {
 	gin.SetMode(os.Getenv("GIN_MODE"))
+
 	router := routers.SetupRouter()
-	router.POST("/login", handler.PostLogin)
 	router.Run(":8000")
 }
