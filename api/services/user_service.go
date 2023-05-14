@@ -3,8 +3,10 @@ package services
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/dasagho/playground/api/client"
@@ -24,14 +26,40 @@ func GetUserClient(login model.Login) *client.Client {
 func LoginUser(login model.Login, client *client.Client) (*http.Response, error) {
 	formData := login.FillLoginFormData()
 	loginResponse, err := client.PostForm(loginEndpoint, formData)
+
 	if err != nil {
 		return nil, errors.New("Error building login request " + err.Error())
 	}
 
 	if loginResponse.StatusCode != 200 {
-		return nil, errors.New("Error on Post login request")
+		return nil, errors.New("error on Post login request")
 	}
+
 	return loginResponse, nil
+}
+
+func CheckLogin(login model.Login, loginResponse *http.Response) error {
+	doc, err := goquery.NewDocumentFromReader(loginResponse.Body)
+	if err != nil {
+		return fmt.Errorf("error parsing poliformat login response %s", err.Error())
+	}
+
+	docu, _ := io.ReadAll(loginResponse.Body)
+
+	dniString := doc.Find(".Mrphs-userNav__submenuitem--userid").First().Text()
+	if len(dniString) == 0 {
+		return fmt.Errorf("error login failed %s", docu)
+	}
+
+	dni, err := strconv.Atoi(dniString)
+	if err != nil {
+		return fmt.Errorf("error casting string to int %s", err.Error())
+	}
+
+	if dni != login.User {
+		return fmt.Errorf("error dni mismatch %d != %d", dni, login.User)
+	}
+	return nil
 }
 
 func GetSubjects(login model.Login, client *client.Client, loginResponse *http.Response) ([]model.Subject, error) {
@@ -43,7 +71,7 @@ func GetSubjects(login model.Login, client *client.Client, loginResponse *http.R
 	return external.GetPoliformatMainPageData(*poliformatDocument, *client), nil
 }
 
-func GetUser(userList []model.User, client *client.Client, SubjectList []model.Subject) (model.User, error) {
+func CreateUser(userList []model.User, client *client.Client, SubjectList []model.Subject) (model.User, error) {
 	poliformat, err := url.Parse(poliformatURL)
 	if err != nil {
 		return model.User{}, errors.New("Error searching poliformat cookie " + err.Error())
@@ -54,27 +82,24 @@ func GetUser(userList []model.User, client *client.Client, SubjectList []model.S
 		return model.User{}, errors.New("Error searching upv cookie " + err.Error())
 	}
 
+	poliCookies := client.Jar.Cookies(poliformat)
+	if len(poliCookies) < 1 {
+		return model.User{}, fmt.Errorf("failed find cookies for domain: %s", poliformat)
+	}
+
+	upvCookies := client.Jar.Cookies(upv)
+	if len(upvCookies) < 1 {
+		return model.User{}, fmt.Errorf("failed find cookies for domain: %s", upv)
+	}
+
+	jsessionId := poliCookies[1]
+	tpd := upvCookies[0]
+
 	return model.NewUser(
 		len(userList),
-		*client.Jar.Cookies(poliformat)[1],
-		*client.Jar.Cookies(upv)[0],
+		*jsessionId,
+		*tpd,
 		SubjectList,
 		*client,
 	), nil
-}
-
-func FindUser(id int, userList []model.User) (model.User, error) {
-	var userSearched model.User
-	for _, user := range userList {
-		if user.Id == id {
-			userSearched = user
-			break
-		}
-	}
-
-	if userSearched.JsessionID.Name == "" {
-		return model.User{}, errors.New(fmt.Sprintf("Can't find User with Id: %d", id))
-	}
-
-	return userSearched, nil
 }

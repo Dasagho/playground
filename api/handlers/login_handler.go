@@ -8,30 +8,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var userList []model.User
+var userList model.UserList
 
 func PostLogin(c *gin.Context) {
 	var login model.Login
 	if err := c.BindJSON(&login); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error:": err.Error()})
+		return
 	}
 
 	client := services.GetUserClient(login)
 	res, err := services.LoginUser(login, client)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+
+	err = services.CheckLogin(login, res)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+		return
 	}
 
 	subjectList, err := services.GetSubjects(login, client, res)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
 	}
 
-	user, err := services.GetUser(userList, client, subjectList)
+	user, err := services.CreateUser(userList.Get(), client, subjectList)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
 	}
 
-	userList = append(userList, user)
+	userList.Append(user)
+
 	c.JSON(http.StatusOK, subjectList)
 }
