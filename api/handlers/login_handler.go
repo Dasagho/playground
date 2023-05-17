@@ -24,17 +24,13 @@ func PostLogin(c *gin.Context) {
 		return
 	}
 
-	err = services.CheckLogin(login, res)
+	poliPage, err := services.CheckLogin(login, res)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 		return
 	}
 
-	subjectList, err := services.GetSubjects(login, client, res)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-		return
-	}
+	subjectList := services.GetSubjects(login, client, poliPage)
 
 	user, err := services.CreateUser(userList.Get(), client, subjectList)
 	if err != nil {

@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -25,6 +24,7 @@ func GetUserClient(login model.Login) *client.Client {
 
 func LoginUser(login model.Login, client *client.Client) (*http.Response, error) {
 	formData := login.FillLoginFormData()
+
 	loginResponse, err := client.PostForm(loginEndpoint, formData)
 
 	if err != nil {
@@ -38,37 +38,34 @@ func LoginUser(login model.Login, client *client.Client) (*http.Response, error)
 	return loginResponse, nil
 }
 
-func CheckLogin(login model.Login, loginResponse *http.Response) error {
+func CheckLogin(login model.Login, loginResponse *http.Response) (goquery.Document, error) {
 	doc, err := goquery.NewDocumentFromReader(loginResponse.Body)
-	if err != nil {
-		return fmt.Errorf("error parsing poliformat login response %s", err.Error())
-	}
 
-	docu, _ := io.ReadAll(loginResponse.Body)
+	defer loginResponse.Body.Close()
+
+	if err != nil {
+		return goquery.Document{}, fmt.Errorf("error parsing poliformat login response %s", err.Error())
+	}
 
 	dniString := doc.Find(".Mrphs-userNav__submenuitem--userid").First().Text()
 	if len(dniString) == 0 {
-		return fmt.Errorf("error login failed %s", docu)
+		return goquery.Document{}, fmt.Errorf("error login failed")
 	}
 
 	dni, err := strconv.Atoi(dniString)
 	if err != nil {
-		return fmt.Errorf("error casting string to int %s", err.Error())
+		return goquery.Document{}, fmt.Errorf("error casting string to int %s", err.Error())
 	}
 
 	if dni != login.User {
-		return fmt.Errorf("error dni mismatch %d != %d", dni, login.User)
+		return goquery.Document{}, fmt.Errorf("error dni mismatch %d != %d", dni, login.User)
 	}
-	return nil
+
+	return *doc, nil
 }
 
-func GetSubjects(login model.Login, client *client.Client, loginResponse *http.Response) ([]model.Subject, error) {
-	poliformatDocument, err := goquery.NewDocumentFromReader(loginResponse.Body)
-	if err != nil {
-		return nil, errors.New("Error parsing HTML response " + err.Error())
-	}
-	defer loginResponse.Body.Close()
-	return external.GetPoliformatMainPageData(*poliformatDocument, *client), nil
+func GetSubjects(login model.Login, client *client.Client, loginResponse goquery.Document) []model.Subject {
+	return external.GetPoliformatMainPageData(loginResponse, *client)
 }
 
 func CreateUser(userList []model.User, client *client.Client, SubjectList []model.Subject) (model.User, error) {
