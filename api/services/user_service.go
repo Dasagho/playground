@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/dasagho/playground/api/client"
@@ -22,17 +21,13 @@ func GetUserClient(login model.Login) *client.Client {
 	return client
 }
 
-func LoginUser(login model.Login, client *client.Client) (*http.Response, error) {
+func SendLoginRequest(login model.Login, client *client.Client) (*http.Response, error) {
 	formData := login.FillLoginFormData()
 
 	loginResponse, err := client.PostForm(loginEndpoint, formData)
 
 	if err != nil {
 		return nil, errors.New("Error building login request " + err.Error())
-	}
-
-	if loginResponse.StatusCode != 200 {
-		return nil, errors.New("error on Post login request")
 	}
 
 	return loginResponse, nil
@@ -52,14 +47,14 @@ func CheckLogin(login model.Login, loginResponse *http.Response) (goquery.Docume
 		return goquery.Document{}, fmt.Errorf("error login failed")
 	}
 
-	dni, err := strconv.Atoi(dniString)
-	if err != nil {
-		return goquery.Document{}, fmt.Errorf("error casting string to int %s", err.Error())
-	}
+	// dni, err := strconv.Atoi(dniString)
+	// if err != nil {
+	// 	return goquery.Document{}, fmt.Errorf("error casting string to int %s", err.Error())
+	// }
 
-	if dni != login.User {
-		return goquery.Document{}, fmt.Errorf("error dni mismatch %d != %d", dni, login.User)
-	}
+	// if dni != login.User {
+	// 	return goquery.Document{}, fmt.Errorf("error dni mismatch %d != %d", dni, login.User)
+	// }
 
 	return *doc, nil
 }

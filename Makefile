@@ -5,7 +5,6 @@ build:
 	go build -o runServer
 
 test:
-	go test ./api/handler/login_handler_test.go
-
-test-v:
-	go test ./api/handler/login_handler_test.go -v
+	for test in $(shell find . -name "*_test.go" -printf '%h\n' | sort -u); do \
+		go test -v $$test;\
+	done

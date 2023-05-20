@@ -18,7 +18,7 @@ func PostLogin(c *gin.Context) {
 	}
 
 	client := services.GetUserClient(login)
-	res, err := services.LoginUser(login, client)
+	res, err := services.SendLoginRequest(login, client)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
@@ -26,7 +26,7 @@ func PostLogin(c *gin.Context) {
 
 	poliPage, err := services.CheckLogin(login, res)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"Error": err.Error()})
 		return
 	}
 
